@@ -1,0 +1,516 @@
+package com.ac.web.platform.it.basicguielements;
+
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.log4j.Logger;
+import org.openqa.selenium.By;
+import org.openqa.selenium.Dimension;
+import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.Point;
+import org.openqa.selenium.StaleElementReferenceException;
+import org.openqa.selenium.WebElement;
+
+import com.ac.web.it.common.selenium.TestContext;
+import com.ac.web.platform.it.utils.Browser;
+import com.ac.web.platform.it.utils.WaitUtils;
+
+/**
+ * An implementation of the WebDriver's WebElement interface that is actually a wrapper around any possible
+ * implementation of WebElement (e.g. HtmlUnitWebElement or RemoteWebElement) to avoid StaleElementReferenceException <br>
+ * 
+ * A StaleElementReferenceException occurs when we want to call a method of a WebElement that interacts with one DOM
+ * element that has changed since the last time we have located
+ * http://docs.seleniumhq.org/exceptions/stale_element_reference.jsp <br>
+ * 
+ * With this wrapper, before we actually call a method of Web Element, we wait until that calling does not trigger any
+ * exception, then call that method again. Of course we assume that after this wait, then the DOM element does not
+ * change anymore (between the time of locating and the time of interacting). There is no guarantee that this assumption
+ * is true, but experience (from the Internet and from my own) shows that it accounts for >= 90% of the cases
+ * 
+ * Created on Sep 5, 2014
+ * 
+ * 
+ * 
+ * 
+ */
+public class NonStaleWebElement implements WebElement
+{
+    protected final Logger logger = Logger.getLogger(getClass());
+
+    private final By by;
+
+    public NonStaleWebElement(By by)
+    {
+        this.by = by;
+    }
+
+    /**
+     * Waits until the inner element is enabled, then tries clicking on it (while waiting that this clicking does not
+     * throw an exception)
+     */
+    @Override
+    public void click()
+    {
+        WaitUtils.pollUntilTrue(new Callable<Boolean>()
+        {
+
+            @Override
+            public Boolean call() throws Exception
+            {
+                return isEnabled() && isDisplayed();
+            }
+
+        }, true);
+
+        WaitUtils.pollUntilTrue(new Callable<Boolean>()
+        {
+
+            @Override
+            public Boolean call() throws Exception
+            {
+                WebElement element = findElementInternally();
+                try
+                {
+                    element.click();
+                    return true;
+                }
+                catch (StaleElementReferenceException ex)
+                {
+                    logDown(this.getClass().getEnclosingMethod().getName());
+                    return false;
+                }
+            }
+
+        }, true);
+    }
+
+    @Override
+    public void submit()
+    {
+        WaitUtils.pollUntilTrue(new Callable<Boolean>()
+        {
+
+            @Override
+            public Boolean call() throws Exception
+            {
+                WebElement element = findElementInternally();
+                try
+                {
+                    element.submit();
+                    return true;
+                }
+                catch (StaleElementReferenceException ex)
+                {
+                    logDown(this.getClass().getEnclosingMethod().getName());
+                    return false;
+                }
+            }
+
+        }, true);
+
+        findElementInternally().submit();
+    }
+
+    @Override
+    public void sendKeys(final CharSequence... keysToSend)
+    {
+        WaitUtils.pollUntilTrue(new Callable<Boolean>()
+        {
+
+            @Override
+            public Boolean call() throws Exception
+            {
+                WebElement element = findElementInternally();
+                try
+                {
+                    element.sendKeys(keysToSend);
+                    return true;
+                }
+                catch (StaleElementReferenceException ex)
+                {
+                    logDown(this.getClass().getEnclosingMethod().getName());
+                    return false;
+                }
+            }
+
+        }, true);
+
+        findElementInternally().sendKeys(keysToSend);
+    }
+
+    @Override
+    public void clear()
+    {
+        WaitUtils.pollUntilTrue(new Callable<Boolean>()
+        {
+
+            @Override
+            public Boolean call() throws Exception
+            {
+                WebElement element = findElementInternally();
+                try
+                {
+                    element.clear();
+                    return true;
+                }
+                catch (StaleElementReferenceException ex)
+                {
+                    logDown(this.getClass().getEnclosingMethod().getName());
+                    return false;
+                }
+            }
+
+        }, true);
+
+        findElementInternally().clear();
+    }
+
+    @Override
+    public String getTagName()
+    {
+        WaitUtils.pollUntilTrue(new Callable<Boolean>()
+        {
+
+            @Override
+            public Boolean call() throws Exception
+            {
+                WebElement element = findElementInternally();
+                try
+                {
+                    element.getTagName();
+                    return true;
+                }
+                catch (StaleElementReferenceException ex)
+                {
+                    logDown(this.getClass().getEnclosingMethod().getName());
+                    return false;
+                }
+            }
+
+        }, true);
+
+        return findElementInternally().getTagName();
+    }
+
+    /**
+     * Waits with significantly long time until getAttribute(String) does not throw an error. Reality on the TimeTable
+     * page shows that this could last some seconds
+     */
+    @Override
+    public String getAttribute(final String name)
+    {
+        WaitUtils.pollUntilTrue(WaitUtils.POLL_INTERVAL, WaitUtils.POLL_TIMEOUT, TimeUnit.MILLISECONDS, true,
+                new Callable<Boolean>()
+                {
+
+                    @Override
+                    public Boolean call() throws Exception
+                    {
+                        WebElement element = findElementInternally();
+                        try
+                        {
+                            element.getAttribute(name);
+                            return true;
+                        }
+                        catch (StaleElementReferenceException ex)
+                        {
+                            logDown(this.getClass().getEnclosingMethod().getName());
+                            return false;
+                        }
+                    }
+
+                });
+
+        return findElementInternally().getAttribute(name);
+    }
+
+    @Override
+    public boolean isSelected()
+    {
+        WaitUtils.pollUntilTrue(new Callable<Boolean>()
+        {
+
+            @Override
+            public Boolean call() throws Exception
+            {
+                WebElement element = findElementInternally();
+                try
+                {
+                    element.isSelected();
+                    return true;
+                }
+                catch (StaleElementReferenceException ex)
+                {
+                    logDown(this.getClass().getEnclosingMethod().getName());
+                    return false;
+                }
+            }
+
+        }, true);
+
+        return findElementInternally().isSelected();
+    }
+
+    @Override
+    public boolean isEnabled()
+    {
+        WaitUtils.pollUntilTrue(new Callable<Boolean>()
+        {
+
+            @Override
+            public Boolean call() throws Exception
+            {
+                WebElement element = findElementInternally();
+                try
+                {
+                    element.isEnabled();
+                    return true;
+                }
+                catch (StaleElementReferenceException ex)
+                {
+                    logDown(this.getClass().getEnclosingMethod().getName());
+                    return false;
+                }
+            }
+
+        }, true);
+        return findElementInternally().isEnabled();
+    }
+
+    @Override
+    public String getText()
+    {
+        WaitUtils.pollUntilTrue(new Callable<Boolean>()
+        {
+
+            @Override
+            public Boolean call() throws Exception
+            {
+                WebElement element = findElementInternally();
+                try
+                {
+                    element.getText();
+                    return true;
+                }
+                catch (StaleElementReferenceException ex)
+                {
+                    logDown(this.getClass().getEnclosingMethod().getName());
+                    return false;
+                }
+            }
+
+        }, true);
+
+        return findElementInternally().getText();
+    }
+
+    @Override
+    public List<WebElement> findElements(final By by)
+    {
+        return findElementInternally().findElements(by);
+    }
+
+    @Override
+    public WebElement findElement(final By by)
+    {
+        WaitUtils.pollUntilTrue(new Callable<Boolean>()
+        {
+
+            @Override
+            public Boolean call() throws Exception
+            {
+                WebElement element = findElementInternally();
+                try
+                {
+                    element.findElement(by);
+                    return true;
+                }
+                catch (StaleElementReferenceException ex)
+                {
+                    logDown(this.getClass().getEnclosingMethod().getName());
+                    return false;
+                }
+            }
+
+        }, true);
+
+        return findElementInternally().findElement(by);
+    }
+
+    @Override
+    public boolean isDisplayed()
+    {
+        WaitUtils.pollUntilTrue(new Callable<Boolean>()
+        {
+
+            @Override
+            public Boolean call() throws Exception
+            {
+                WebElement element = findElementInternally();
+                try
+                {
+                    element.isDisplayed();
+                    return true;
+                }
+                catch (StaleElementReferenceException ex)
+                {
+                    logDown(this.getClass().getEnclosingMethod().getName());
+                    return false;
+                }
+            }
+
+        }, true);
+
+        return findElementInternally().isDisplayed();
+    }
+
+    @Override
+    public Point getLocation()
+    {
+        WaitUtils.pollUntilTrue(new Callable<Boolean>()
+        {
+
+            @Override
+            public Boolean call() throws Exception
+            {
+                WebElement element = findElementInternally();
+                try
+                {
+                    element.getLocation();
+                    return true;
+                }
+                catch (StaleElementReferenceException ex)
+                {
+                    logDown(this.getClass().getEnclosingMethod().getName());
+                    return false;
+                }
+            }
+
+        }, true);
+
+        return findElementInternally().getLocation();
+    }
+
+    @Override
+    public Dimension getSize()
+    {
+        WaitUtils.pollUntilTrue(new Callable<Boolean>()
+        {
+
+            @Override
+            public Boolean call() throws Exception
+            {
+                WebElement element = findElementInternally();
+                try
+                {
+                    element.getSize();
+                    return true;
+                }
+                catch (StaleElementReferenceException ex)
+                {
+                    logDown(this.getClass().getEnclosingMethod().getName());
+                    return false;
+                }
+            }
+
+        }, true);
+
+        return findElementInternally().getSize();
+    }
+
+    @Override
+    public String getCssValue(final String propertyName)
+    {
+        WaitUtils.pollUntilTrue(new Callable<Boolean>()
+        {
+
+            @Override
+            public Boolean call() throws Exception
+            {
+                WebElement element = findElementInternally();
+                try
+                {
+                    element.getCssValue(propertyName);
+                    return true;
+                }
+                catch (StaleElementReferenceException ex)
+                {
+                    logDown(this.getClass().getEnclosingMethod().getName());
+                    return false;
+                }
+            }
+
+        }, true);
+
+        return findElementInternally().getCssValue(propertyName);
+    }
+
+    /**
+     * Clicks on the element by directly calling javascript <code>click</code> method on the provided By
+     * 
+     * @param By By locator of the web element to click on
+     */
+    public NonStaleWebElement clickByJs()
+    {
+        final JavascriptExecutor executor = (JavascriptExecutor) TestContext.get().getDriver();
+        WaitUtils.pollUntilTrue(new Callable<Boolean>()
+        {
+
+            @Override
+            public Boolean call() throws Exception
+            {
+                WebElement element = findElementInternally();
+
+                try
+                {
+                    executor.executeScript("arguments[0].click()", element);
+                    return true;
+                }
+                catch (StaleElementReferenceException ex)
+                {
+                    logDown(this.getClass().getEnclosingMethod().getName());
+                    return false;
+                }
+            }
+
+        }, true);
+
+        return (NonStaleWebElement) executor.executeScript("arguments[0].click()", findElementInternally());
+    }
+
+    /**
+     * @return the by
+     */
+    public By getBy()
+    {
+        return by;
+    }
+
+    /**
+     * @return
+     */
+    public WebElement findElementInternally()
+    {
+        return Browser.getInstance().getDriver().findElement(by);
+    }
+
+    public void logDown(String methodName)
+    {
+        logger.info("StaleElementReferenceException got in NonStaleWebElement at method: " + methodName);
+    }
+
+    /**
+     * Get the method name for a depth in call stack. <br />
+     * Utility function
+     * 
+     * @param depth depth in the call stack (0 means current method, 1 means call method, ...)
+     * @return method name
+     */
+    public static String getMethodName(final int depth)
+    {
+        final StackTraceElement[] ste = Thread.currentThread().getStackTrace();
+        return ste[ste.length - 1 - depth].getMethodName();
+    }
+}
